@@ -4,8 +4,13 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
 function wait_for_installation_finish() {
     echo "waiting for ks-installer pod ready"
+    until kubectl -n kubesphere-system get pod -l app=ks-install -oname 2>/dev/null | grep -q pod; do
+        sleep 2
+    done
     kubectl -n kubesphere-system wait --timeout=180s --for=condition=Ready "$(kubectl -n kubesphere-system get pod -l app=ks-install -oname)"
     echo "waiting for KubeSphere ready"
     while IFS= read -r line; do
@@ -28,8 +33,8 @@ if [[ "${KIND_LOAD_IMAGE:-}" == "y" ]]; then
 fi
 
 #TODO: override ks-apiserver and ks-controller-manager images with specific tag
-kubectl apply -f https://raw.githubusercontent.com/kubesphere/ks-installer/master/deploy/kubesphere-installer.yaml
-kubectl apply -f https://raw.githubusercontent.com/kubesphere/ks-installer/master/deploy/cluster-configuration.yaml
+kubectl apply -f "${REPO_ROOT}/hack/deploy/kubesphere-installer.yaml"
+kubectl apply -f "${REPO_ROOT}/hack/deploy/cluster-configuration.yaml"
 
 
 wait_for_installation_finish
